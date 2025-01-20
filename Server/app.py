@@ -15,7 +15,7 @@ def get_welcome():
 # For AssetBundle
 @app.route('/assetbundle/<filename>', methods=['GET'])
 def get_asset_bundle(filename):
-    return send_from_directory('static', filename)
+    return send_from_directory('assetbundle', filename)
 
 if __name__ == '__main__':
     app.run(debug=True)
