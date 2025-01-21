@@ -1,21 +1,25 @@
 using TMPro;
 using UnityEngine;
 using DG.Tweening;
+using System.Collections;
 
 public class Banana : MonoBehaviour
 {
-    public TextMeshProUGUI scoreText;
-    public TextMeshProUGUI autoText;
-    public ParticleSystem particle;
-    public TextEffect textEffect;
-    public Canvas canvas;
-    public AudioSource audioSource;
+    [SerializeField] private GameManager gameManager;
 
     [Space]
-    public AudioClip[] clickSounds;
+    [SerializeField] private TextMeshProUGUI scoreText;
+    [SerializeField] private TextMeshProUGUI autoText;
+    [SerializeField] private ParticleSystem particle;
+    [SerializeField] private TextEffect textEffect;
+    [SerializeField] private Canvas canvas;
+    [SerializeField] private AudioSource audioSource;
+
+    [Space]
+    [SerializeField] private AudioClip[] clickSounds;
 
     private int score = 0;
-    private int custom = 4;
+    private int clickScore = 4;
     private int auto = 2;
     private float textEffectRadius = .75f;
 
@@ -23,26 +27,36 @@ public class Banana : MonoBehaviour
     {
         Load();
 
-        scoreText.text = score.ToString();
+        StartCoroutine(AutoClickCoroutine());
+    }
 
-        InvokeRepeating("AutoClick", 1f, 1f);
+    public void Load()
+    {
+        SaveSystem.SettingsData loadData = SaveSystem.Instance.Load();
+
+        score = loadData.score;
+        clickScore = loadData.clickScore;
+        auto = loadData.auto;
 
         autoText.text = $"{FormatNumber(auto)} P/S";
+        scoreText.text = FormatNumber(score);
     }
 
-    private void Load()
+    public void Save()
     {
-        score = PlayerPrefs.GetInt("score", 0);
-    }
+        SaveSystem.SettingsData currentData = new SaveSystem.SettingsData
+        {
+            score = this.score,
+            clickScore = this.clickScore,
+            auto = this.auto
+        };
 
-    private void Save()
-    {
-        PlayerPrefs.SetInt("score", score);
+        SaveSystem.Instance.Save(currentData);
     }
 
     private void OnMouseDown()
     {
-        Click(custom);
+        Click(clickScore);
 
         transform.DOKill();
         transform.localScale = Vector3.one;
@@ -50,24 +64,24 @@ public class Banana : MonoBehaviour
 
         particle.Play();
 
-        audioSource.PlayOneShot(clickSounds[Random.Range(0, clickSounds.Length)]);
+        audioSource.PlayOneShot(clickSounds[Random.Range(0, clickSounds.Length)], 1f);
     }
 
-    private void AutoClick()
+    private IEnumerator AutoClickCoroutine()
     {
-        Click(auto);
-    }
+        while (true)
+        {
+            yield return new WaitForSeconds(1);
 
-    private void CreateTextEffect(string text, Vector2 position)
-    {
-        Instantiate(textEffect, position, textEffect.transform.rotation, canvas.transform).Set(text);
+            Click(auto);
+        }
     }
 
     private void Click(int value)
     {
         score += value;
 
-        Save();
+        // Save();
 
         scoreText.text = FormatNumber(score);
 
@@ -77,6 +91,11 @@ public class Banana : MonoBehaviour
 
         Vector3 randomPosition = new Vector2(Random.Range(-textEffectRadius, textEffectRadius), Random.Range(-textEffectRadius, textEffectRadius));
         CreateTextEffect(value.ToString(), Camera.main.WorldToScreenPoint(transform.position + randomPosition));
+    }
+
+    private void CreateTextEffect(string text, Vector2 position)
+    {
+        Instantiate(textEffect, position, textEffect.transform.rotation, canvas.transform).Set(text);
     }
 
     public static string FormatNumber(int number)
